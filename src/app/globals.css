@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --bg: #05060a;
+  --fg: #e8eefc;
+  --muted: #8b9bb8;
+  --border: rgba(148, 163, 184, 0.14);
+  --cyan: #22d3ee;
+  --violet: #a78bfa;
+  --blue: #60a5fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.28);
+  color: #fff;
+}
+
+/* Keyboard focus — visible ring for a11y (do not remove outline without replacement) */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.9);
+  outline-offset: 2px;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.9);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+/* Touch target helper */
+.btn-touch {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Subtle noise overlay via CSS only */
+.bg-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+.glass {
+  background: linear-gradient(
+    145deg,
+    rgba(22, 28, 48, 0.72),
+    rgba(12, 16, 28, 0.55)
+  );
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+}
+
+.input-glow:focus-within {
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.45),
+    0 0 32px rgba(34, 211, 238, 0.12);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.45);
+  border-radius: 999px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
