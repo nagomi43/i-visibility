@@ -45,3 +45,5 @@ next-env.d.ts
 /gh-auth-out.txt
 /gh-device.json
 /.github-publish.ps1
+
+.vercel
