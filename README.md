@@ -56,6 +56,27 @@ Content-Type: application/json
 { "url": "https://example.com" }
 ```
 
+任意のキーワード / AI想定質問（最大3件）:
+
+```http
+POST /api/analyze
+Content-Type: application/json
+
+{
+  "url": "https://example.com",
+  "keyword": "生成AI SEO",
+  "questions": ["生成AI時代のSEOとは？"]
+}
+```
+
+`keyword` / `questions` は省略可能です。未指定時も結果に **キーワード分析** カードを表示し、「キーワード未入力のため、サイト構造のみ分析しています」と案内します（**Query Visibility Score は非表示**）。
+
+キーワード入力時は次を 0–100 でルールベース評価します。
+
+- キーワード関連性 / 検索意図一致度 / 回答カバー率 / 質問カバー率 / トピック網羅性 / **Query Visibility Score**
+- 評価対象: title, description, H1–H3, 本文, FAQ/Q&A, JSON-LD, 出典, 具体例
+- 一致シグナルと不足項目をカードに表示（既存 8 軸レーダーは変更なし）
+
 デモ:
 
 ```http

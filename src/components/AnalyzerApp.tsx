@@ -5,13 +5,28 @@ import type { AnalysisResult, AnalyzeApiResponse } from "@/lib/types";
 import { Header } from "./Header";
 import { ResultView } from "./ResultView";
 
+function parseQuestionsField(raw: string): string[] {
+  return raw
+    .split(/\r?\n/)
+    .map((q) => q.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
 export function AnalyzerApp() {
   const [url, setUrl] = useState("https://example.com");
+  const [keyword, setKeyword] = useState("");
+  const [questionsText, setQuestionsText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
-  async function runAnalyze(payload: { url?: string; demo?: boolean }) {
+  async function runAnalyze(payload: {
+    url?: string;
+    demo?: boolean;
+    keyword?: string;
+    questions?: string[];
+  }) {
     setLoading(true);
     setError(null);
     try {
@@ -39,7 +54,16 @@ export function AnalyzerApp() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    void runAnalyze({ url });
+    const questions = parseQuestionsField(questionsText);
+    const payload: {
+      url: string;
+      keyword?: string;
+      questions?: string[];
+    } = { url };
+    const kw = keyword.trim();
+    if (kw) payload.keyword = kw;
+    if (questions.length > 0) payload.questions = questions;
+    void runAnalyze(payload);
   }
 
   function handleDemo() {
@@ -50,6 +74,9 @@ export function AnalyzerApp() {
     setResult(null);
     setError(null);
   }
+
+  const questionLines = questionsText.split(/\r?\n/).filter((l) => l.trim());
+  const questionOver = questionLines.length > 3;
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
@@ -89,39 +116,94 @@ export function AnalyzerApp() {
               </h1>
               <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-slate-400 sm:text-base">
                 URLを入力すると HTML を解析し、SEO / AEO / GEO
-                の観点から AI Visibility Score を推定します。実際の ChatGPT や
-                Perplexity の順位測定ではありません。
+                の観点から AI Visibility Score を推定します。キーワードや AI
+                想定質問は任意です。
               </p>
             </div>
 
             <form
               onSubmit={handleSubmit}
-              className="glass input-glow mt-10 rounded-2xl p-2 sm:p-3"
+              className="glass input-glow mt-10 space-y-3 rounded-2xl p-3 sm:p-4"
               aria-label="URL解析フォーム"
             >
-              <label htmlFor="url" className="sr-only">
-                解析するURL
-              </label>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <input
-                  id="url"
-                  type="url"
-                  inputMode="url"
-                  autoComplete="url"
-                  placeholder="https://example.com"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="min-h-11 w-full rounded-xl border border-transparent bg-black/30 px-4 py-3.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/20 sm:text-base"
-                  disabled={loading}
-                  required
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-touch shrink-0 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-3 text-sm font-semibold text-void-950 shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              <div>
+                <label
+                  htmlFor="url"
+                  className="mb-1.5 block text-xs font-medium text-slate-400"
                 >
-                  {loading ? "解析中…" : "Analyze"}
-                </button>
+                  URL <span className="text-rose-300/80">必須</span>
+                </label>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <input
+                    id="url"
+                    type="url"
+                    inputMode="url"
+                    autoComplete="url"
+                    placeholder="https://example.com"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    className="min-h-11 w-full rounded-xl border border-transparent bg-black/30 px-4 py-3.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/20 sm:text-base"
+                    disabled={loading}
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading || questionOver}
+                    className="btn-touch shrink-0 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-3 text-sm font-semibold text-void-950 shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {loading ? "解析中…" : "Analyze"}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="keyword"
+                  className="mb-1.5 block text-xs font-medium text-slate-400"
+                >
+                  メインキーワード{" "}
+                  <span className="font-normal text-slate-600">任意</span>
+                </label>
+                <input
+                  id="keyword"
+                  type="text"
+                  placeholder="例: 生成AI SEO"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  maxLength={120}
+                  className="min-h-11 w-full rounded-xl border border-transparent bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/20"
+                  disabled={loading}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="questions"
+                  className="mb-1.5 block text-xs font-medium text-slate-400"
+                >
+                  AI想定質問{" "}
+                  <span className="font-normal text-slate-600">
+                    任意・最大3件・1行1質問
+                  </span>
+                </label>
+                <textarea
+                  id="questions"
+                  rows={3}
+                  placeholder={"例:\n生成AI時代のSEOとは？\nAEOとSEOの違いは？"}
+                  value={questionsText}
+                  onChange={(e) => setQuestionsText(e.target.value)}
+                  className="w-full resize-y rounded-xl border border-transparent bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/20"
+                  disabled={loading}
+                />
+                <p
+                  className={`mt-1 text-[11px] ${
+                    questionOver ? "text-rose-300" : "text-slate-600"
+                  }`}
+                >
+                  {questionOver
+                    ? "質問は最大3行までです。余分な行を削除してください。"
+                    : `${Math.min(questionLines.length, 3)} / 3 件`}
+                </p>
               </div>
             </form>
 
@@ -135,7 +217,7 @@ export function AnalyzerApp() {
                 Demo data
               </button>
               <p className="text-center text-[11px] text-slate-500">
-                取得に失敗した場合でも、デモデータで結果画面を確認できます
+                デモ: キーワード「生成AI SEO」/ 質問「生成AI時代のSEOとは？」
               </p>
             </div>
 

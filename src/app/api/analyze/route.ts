@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { analyzeUrl } from "@/lib/analyze";
 import { getDemoAnalysisResult } from "@/lib/demo-data";
 import { toClientError } from "@/lib/errors";
+import { normalizeKeywordInput } from "@/lib/keyword-analysis";
 import type { AnalyzeApiResponse } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -12,6 +13,8 @@ export async function POST(req: NextRequest) {
     const body = (await req.json().catch(() => null)) as {
       url?: string;
       demo?: boolean;
+      keyword?: string;
+      questions?: string[] | string;
     } | null;
 
     if (body?.demo === true) {
@@ -30,7 +33,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(payload, { status: 400 });
     }
 
-    const result = await analyzeUrl(url);
+    // questions: string[] or newline-separated string
+    let questions: string[] | undefined;
+    if (Array.isArray(body?.questions)) {
+      questions = body.questions.filter((q): q is string => typeof q === "string");
+    } else if (typeof body?.questions === "string") {
+      questions = body.questions
+        .split(/\r?\n/)
+        .map((q) => q.trim())
+        .filter(Boolean);
+    }
+
+    const keywordInput = normalizeKeywordInput({
+      keyword: body?.keyword,
+      questions,
+    });
+
+    const result = await analyzeUrl(url, keywordInput);
     const payload: AnalyzeApiResponse = { ok: true, result };
     return NextResponse.json(payload);
   } catch (e) {

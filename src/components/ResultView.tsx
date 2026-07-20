@@ -8,6 +8,7 @@ import { AiEstimateCards } from "./AiEstimateCards";
 import { IssuesList } from "./IssuesList";
 import { RecommendationsList } from "./RecommendationsList";
 import { SignalsPanel } from "./SignalsPanel";
+import { KeywordAnalysisPanel } from "./KeywordAnalysisPanel";
 
 function formatDate(iso: string): string {
   try {
@@ -79,6 +80,8 @@ export function ResultView({
         <RadarChartPanel radarScores={result.radarScores} />
         <AiEstimateCards scores={result.aiEstimates} />
       </div>
+
+      <KeywordAnalysisPanel analysis={result.keywordAnalysis} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <IssuesList issues={result.issues} />

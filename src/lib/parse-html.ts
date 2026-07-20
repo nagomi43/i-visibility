@@ -171,6 +171,12 @@ function isInternalHref(href: string, pageUrl: string): boolean | null {
   }
 }
 
+export type ParsedHtml = {
+  signals: AnalysisSignals;
+  /** Plain body text for keyword / question matching (not sent in full to client) */
+  bodyText: string;
+};
+
 export function parseHtmlSignals(
   html: string,
   pageUrl: string,
@@ -179,7 +185,7 @@ export function parseHtmlSignals(
     hasRobotsTxt: boolean;
     hasSitemap: boolean;
   }
-): AnalysisSignals {
+): ParsedHtml {
   const $ = cheerio.load(html);
 
   // Remove script/style noise for body text
@@ -274,7 +280,7 @@ export function parseHtmlSignals(
     $('meta[http-equiv="content-language"]').attr("content")?.trim() ||
     null;
 
-  return {
+  const signals: AnalysisSignals = {
     title,
     titleLength: textLength(title),
     metaDescription,
@@ -302,4 +308,6 @@ export function parseHtmlSignals(
     hasSitemap: extras?.hasSitemap ?? false,
     contentLanguage,
   };
+
+  return { signals, bodyText };
 }

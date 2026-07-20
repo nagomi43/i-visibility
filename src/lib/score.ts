@@ -1,8 +1,15 @@
+import {
+  computeKeywordAnalysis,
+  keywordIssues,
+  keywordRecommendations,
+  type KeywordAnalysisInput,
+} from "./keyword-analysis";
 import type {
   AiEstimateScores,
   AnalysisResult,
   AnalysisSignals,
   Issue,
+  KeywordAnalysis,
   PredictedScores,
   RadarScores,
   Recommendation,
@@ -904,7 +911,7 @@ export function buildRecommendations(
       aeo: predictedAeo,
       geo: predictedGeo,
       overall: predictedOverall,
-      note: "改善後スコアはルールベースの予測値であり、実装品質や競合状況により変動します。",
+      note: "改善後スコアはルールベース推定です。Google 等の順位や ChatGPT 等の実際の引用を保証するものではなく、実装品質・競合により変動します。",
     },
   };
 }
@@ -912,7 +919,11 @@ export function buildRecommendations(
 export function buildAnalysisResult(
   url: string,
   signals: AnalysisSignals,
-  mode: "live" | "demo"
+  mode: "live" | "demo",
+  options?: {
+    bodyText?: string;
+    keywordInput?: KeywordAnalysisInput | null;
+  }
 ): AnalysisResult {
   const seo = computeSeoScore(signals);
   const aeo = computeAeoScore(signals);
@@ -920,8 +931,32 @@ export function buildAnalysisResult(
   const overall = computeOverall(seo, aeo, geo);
   const scores: ScoreBreakdown = { seo, aeo, geo, overall };
   const radarScores = computeRadarScores(seo, aeo, geo, signals);
-  const issues = detectIssues(signals);
+
+  const keywordAnalysis: KeywordAnalysis = computeKeywordAnalysis(
+    signals,
+    options?.bodyText || "",
+    options?.keywordInput
+  );
+
+  const issues = [
+    ...detectIssues(signals),
+    ...keywordIssues(keywordAnalysis),
+  ];
+  // Re-sort by severity after merge
+  const order: Record<Severity, number> = {
+    Critical: 0,
+    High: 1,
+    Medium: 2,
+    Low: 3,
+  };
+  issues.sort((a, b) => order[a.severity] - order[b.severity]);
+
   const { recommendations, predicted } = buildRecommendations(signals, scores);
+  const kwRecs = keywordRecommendations(keywordAnalysis);
+  const mergedRecs = [...kwRecs, ...recommendations]
+    .sort((a, b) => b.impactPoints - a.impactPoints)
+    .slice(0, 8);
+
   const aiEstimates = computeAiEstimates(scores, radarScores, signals);
 
   return {
@@ -933,8 +968,9 @@ export function buildAnalysisResult(
     aiEstimates,
     predictedScores: predicted,
     issues,
-    recommendations,
+    recommendations: mergedRecs,
     signals,
+    keywordAnalysis,
     coreWebVitals: {
       lcp: "未測定",
       inp: "未測定",

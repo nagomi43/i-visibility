@@ -15,7 +15,7 @@ export function RecommendationsList({
     <div className="glass rounded-2xl p-4 sm:p-6">
       <h3 className="text-sm font-semibold text-white">AI改善提案</h3>
       <p className="mt-1 text-xs text-slate-400">
-        改善内容と予測効果（ルールベース）
+        改善内容と予測効果（ルールベース推定。実順位・実引用の保証ではありません）
       </p>
 
       <div className="mt-4 rounded-xl border border-cyan-400/20 bg-gradient-to-r from-cyan-500/10 via-blue-500/5 to-violet-500/10 p-4">
@@ -64,7 +64,8 @@ export function RecommendationsList({
                 <p className="mt-1 text-xs leading-relaxed text-slate-400">
                   {rec.description}
                 </p>
-                <p className="mt-2 text-xs text-cyan-200/90">
+                <p className="mt-2 text-xs leading-relaxed text-cyan-200/90">
+                  <span className="font-medium text-cyan-100/90">予測効果: </span>
                   {rec.predictedEffect}
                 </p>
               </div>

@@ -1,10 +1,14 @@
 import { AnalyzeError } from "./errors";
 import { fetchPageHtml, probePathExists } from "./fetch-html";
+import type { KeywordAnalysisInput } from "./keyword-analysis";
 import { parseHtmlSignals } from "./parse-html";
 import { buildAnalysisResult } from "./score";
 import type { AnalysisResult } from "./types";
 
-export async function analyzeUrl(rawUrl: string): Promise<AnalysisResult> {
+export async function analyzeUrl(
+  rawUrl: string,
+  keywordInput?: KeywordAnalysisInput | null
+): Promise<AnalysisResult> {
   const page = await fetchPageHtml(rawUrl);
   const origin = new URL(page.finalUrl).origin;
 
@@ -15,12 +19,15 @@ export async function analyzeUrl(rawUrl: string): Promise<AnalysisResult> {
   ]);
 
   try {
-    const signals = parseHtmlSignals(page.html, page.finalUrl, {
+    const { signals, bodyText } = parseHtmlSignals(page.html, page.finalUrl, {
       hasLlmsTxt,
       hasRobotsTxt,
       hasSitemap,
     });
-    return buildAnalysisResult(page.finalUrl, signals, "live");
+    return buildAnalysisResult(page.finalUrl, signals, "live", {
+      bodyText,
+      keywordInput,
+    });
   } catch (e) {
     if (e instanceof AnalyzeError) throw e;
     throw new AnalyzeError(

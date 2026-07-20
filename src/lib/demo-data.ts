@@ -62,9 +62,24 @@ const demoSignals: AnalysisSignals = {
 };
 
 export function getDemoAnalysisResult() {
+  const bodyText = [
+    "生成AIに引用されやすいコンテンツの作り方",
+    "SEOとAEOの違いとは？ 検索エンジン最適化と回答エンジン最適化のポイントを解説します。",
+    "よくある質問",
+    "FAQPageを使う理由。構造化データの重要性。著者情報の書き方。llms.txtとは。",
+    "生成AI SEO の実践では、明確な見出しと出典が重要です。",
+  ].join("\n");
+
   return buildAnalysisResult(
     "https://demo.ai-visibility.score/blog/ai-citation",
     demoSignals,
-    "demo"
+    "demo",
+    {
+      bodyText,
+      keywordInput: {
+        keyword: "生成AI SEO",
+        questions: ["生成AI時代のSEOとは？"],
+      },
+    }
   );
 }
