@@ -12,6 +12,7 @@ export type AnalyzeErrorCode =
   | "PARSE_ERROR"
   | "SSRF_BLOCKED"
   | "REDIRECT_LIMIT"
+  | "PAYLOAD_TOO_LARGE"
   | "INVALID_URL"
   | "MISSING_URL"
   | "UNKNOWN";

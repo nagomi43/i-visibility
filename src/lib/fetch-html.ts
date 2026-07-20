@@ -3,6 +3,7 @@ import { validatePublicHttpUrl } from "./ssrf";
 
 const FETCH_TIMEOUT_MS = 12_000;
 const MAX_HTML_BYTES = 2_000_000; // 2MB
+const MAX_PROBE_BYTES = 64_000;
 const MAX_REDIRECTS = 5;
 
 const DEFAULT_HEADERS: HeadersInit = {
@@ -92,6 +93,65 @@ async function fetchWithSafeRedirects(
   }
 }
 
+async function readResponseBytes(
+  res: Response,
+  maxBytes: number,
+  tooLargeMessage: string
+): Promise<ArrayBuffer> {
+  const contentLength = Number(res.headers.get("content-length") || 0);
+  if (contentLength > maxBytes) {
+    throw new AnalyzeError(tooLargeMessage, "PAYLOAD_TOO_LARGE");
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) {
+    const buffer = await res.arrayBuffer();
+    if (buffer.byteLength > maxBytes) {
+      throw new AnalyzeError(tooLargeMessage, "PAYLOAD_TOO_LARGE");
+    }
+    return buffer;
+  }
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = value instanceof Uint8Array ? value : new Uint8Array(value);
+      totalBytes += chunk.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel();
+        throw new AnalyzeError(tooLargeMessage, "PAYLOAD_TOO_LARGE");
+      }
+      chunks.push(chunk);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const result = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return result.buffer;
+}
+
+async function readResponseText(
+  res: Response,
+  maxBytes: number
+): Promise<string> {
+  const buffer = await readResponseBytes(
+    res,
+    maxBytes,
+    "対象ファイルが大きすぎるため、安全のため読み込みを中止しました。"
+  );
+  return new TextDecoder("utf-8", { fatal: false }).decode(buffer);
+}
+
 export async function fetchPageHtml(rawUrl: string): Promise<FetchedPage> {
   const initial = await validatePublicHttpUrl(rawUrl);
 
@@ -124,16 +184,17 @@ export async function fetchPageHtml(rawUrl: string): Promise<FetchedPage> {
       );
     }
 
-    let buf: ArrayBuffer;
+    let html: string;
     try {
-      buf = await res.arrayBuffer();
+      const buf = await readResponseBytes(
+        res,
+        MAX_HTML_BYTES,
+        "HTMLが大きすぎるため、安全のため解析を中止しました（上限2MB）。"
+      );
+      html = new TextDecoder("utf-8", { fatal: false }).decode(buf);
     } catch (e) {
       throw classifyNetworkError(e);
     }
-
-    const slice =
-      buf.byteLength > MAX_HTML_BYTES ? buf.slice(0, MAX_HTML_BYTES) : buf;
-    const html = new TextDecoder("utf-8", { fatal: false }).decode(slice);
 
     return {
       url: initial.href,
@@ -175,7 +236,7 @@ export async function probePathExists(
 
       const ct = res.headers.get("content-type") || "";
       if (path.endsWith(".txt") && ct.includes("text/html")) {
-        const text = (await res.text()).slice(0, 500);
+        const text = (await readResponseText(res, MAX_PROBE_BYTES)).slice(0, 500);
         if (
           /<!doctype html|<html/i.test(text) &&
           !/llms|user-agent|sitemap/i.test(text)
@@ -185,7 +246,7 @@ export async function probePathExists(
         return text.trim().length > 0;
       }
       if (path.includes("sitemap") && ct.includes("text/html")) {
-        const text = (await res.text()).slice(0, 400);
+        const text = (await readResponseText(res, MAX_PROBE_BYTES)).slice(0, 400);
         if (
           /<!doctype html|<html/i.test(text) &&
           !/<urlset|<sitemapindex/i.test(text)
