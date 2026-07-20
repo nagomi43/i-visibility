@@ -39,3 +39,8 @@ next-env.d.ts
 # ide
 .idea
 .vscode
+
+# local GitHub authentication artifacts
+/gh-auth-err.txt
+/gh-auth-out.txt
+/gh-device.json
